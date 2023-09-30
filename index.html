@@ -1,0 +1,474 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BOM Calculator</title>
+    <style>body {
+        font-family: Arial, sans-serif;
+    }
+    
+    .container {
+        width: 900px; /* Increased container width for a larger appearance */
+        margin: 0 auto;
+        padding: 30px; /* Increased padding for more spacing */
+        border: 1px solid #ccc;
+        border-radius: 10px; /* Increased border-radius for rounded corners */
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 15px; /* Increased margin for more spacing */
+        font-size: 18px; /* Increased font size */
+    }
+    
+    select, input {
+        width: 100%;
+        padding: 10px; /* Increased padding for larger input fields */
+        margin-bottom: 15px; /* Increased margin for more spacing */
+        font-size: 16px; /* Increased font size */
+    }
+    
+    .material-entry {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px; /* Increased margin for more spacing */
+        font-size: 16px; /* Increased font size */
+    }
+    
+    .remove-material,
+    .add-material {
+        cursor: pointer;
+        color: red;
+        font-size: 20px; /* Increased font size */
+    }
+    
+    #materialOptions {
+        margin-top: 15px; /* Increased margin for more spacing */
+    }
+    
+    #materialOptions select {
+        width: 100%;
+        padding: 10px; /* Increased padding for larger input fields */
+        font-size: 16px; /* Increased font size */
+    }
+    /* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+  background-color: #fff;
+  margin: 10% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+.close {
+  float: right;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+button {
+  margin-top: 10px;
+}
+
+    
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BOM Calculator</h1>
+        <label for="projectCode">Project Code:</label>
+        <input type="text" id="projectCode">
+
+
+        <label for="productType">Select Product:</label>
+        <input type="text" id="productType" oninput="generateMaterials()">
+
+            
+
+        <label for="quantity">Quantity of Products:</label>
+        <input type="number" id="quantity">
+
+        <div id="materialList">
+            <!-- Material table will be generated dynamically here -->
+        </div>
+        
+        <label for="labourCharges">Labour Charges (₹):</label>
+        <input type="number" id="labourCharges">
+        <div id="additionalCosts">
+            <!-- Additional cost input fields will be dynamically generated here -->
+        </div>
+        <button class="add-cost" onclick="addAdditionalCost()">+ Add Cost</button>
+        <button class="add-material" onclick="addMaterial()">+</button>
+        <button class="calculate-button" onclick="calculateBOM()">Calculate BOM</button>
+
+        <p id="result">Total Material Cost: ₹0.00</p>
+
+        <div id="materialOptions">
+            <label for="availableMaterials">Available Materials:</label>
+            <select id="availableMaterials">
+                <!-- Options will be populated dynamically -->
+            </select>
+            <button class="add-material" onclick="addMaterialOption()">Add Material</button>
+        </div>
+        
+        <button class="change-material-price" onclick="initializePriceModal()">Change Material Price</button>
+        <div id="priceModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closePriceModal()">&times;</span>
+                <h2>Change Material Prices</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Price per Unit (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="priceModalBody">
+                        <!-- Existing materials will be populated here -->
+                    </tbody>
+                </table>
+                <div>
+                    <label for="newMaterial">New Material:</label>
+                    <input type="text" id="newMaterial" placeholder="Enter new material name">
+                    <label for="newMaterialPrice">Price per Unit (₹):</label>
+                    <input type="number" id="newMaterialPrice" placeholder="Enter price">
+                    <button onclick="addNewMaterial()">Add New Material</button>
+                </div>
+                <button onclick="updateMaterialPrices()">Save Changes</button>
+            </div>
+        </div>
+          
+    </div>
+
+    <script>
+        function addNewMaterial() {
+    const newMaterialName = document.getElementById('newMaterial').value;
+    const newMaterialPrice = parseFloat(document.getElementById('newMaterialPrice').value);
+
+    if (newMaterialName && !isNaN(newMaterialPrice)) {
+        // Add the new material and price to the materialPrices object
+        materialPrices[newMaterialName] = newMaterialPrice;
+
+        // Update the "Available Materials" dropdown
+        const availableMaterialsDropdown = document.getElementById('availableMaterials');
+        const newOption = document.createElement('option');
+        newOption.value = newMaterialName;
+        newOption.textContent = newMaterialName;
+        availableMaterialsDropdown.appendChild(newOption);
+
+        // Clear the input fields
+        document.getElementById('newMaterial').value = '';
+        document.getElementById('newMaterialPrice').value = '';
+
+        // Refresh the material list in the price modal
+        refreshMaterialList();
+    }
+}
+
+function refreshMaterialList() {
+    const priceModalBody = document.getElementById('priceModalBody');
+    priceModalBody.innerHTML = '';
+
+    for (const material in materialPrices) {
+        const row = document.createElement('tr');
+
+        const materialCell = document.createElement('td');
+        materialCell.textContent = material;
+
+        const priceCell = document.createElement('td');
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.value = materialPrices[material];
+        priceCell.appendChild(priceInput);
+
+        row.appendChild(materialCell);
+        row.appendChild(priceCell);
+        priceModalBody.appendChild(row);
+    }
+}
+
+// Modify the initializePriceModal() function to use refreshMaterialList()
+function initializePriceModal() {
+    // Refresh the material list in the price modal
+    refreshMaterialList();
+
+    // Display the price modal
+    openPriceModal();
+}
+
+
+        let additionalCosts = [];
+
+// Function to add an additional cost input field
+function addAdditionalCost() {
+    const additionalCostsContainer = document.getElementById('additionalCosts');
+    const newInput = document.createElement('div');
+    newInput.innerHTML = `
+        <label for="additionalCost">Additional Cost:</label>
+        <input type="number" class="additional-cost" placeholder="Enter additional cost">
+        <button class="remove-cost" onclick="removeAdditionalCost(this)">Remove</button>
+    `;
+    additionalCostsContainer.appendChild(newInput);
+}
+
+// Function to remove an additional cost input field
+function removeAdditionalCost(button) {
+    const additionalCostsContainer = document.getElementById('additionalCosts');
+    additionalCostsContainer.removeChild(button.parentNode);
+}
+    function generateMaterials() {
+    const productType = document.getElementById('productType').value;
+    const materialList = document.getElementById('materialList');
+    const materials = productType === 'sofa' ? ['glue', 'nails', 'cloth'] : ['plywood', 'glue', 'nails'];
+
+    materialList.innerHTML = ''; // Clear existing materials
+
+    // Create a table element
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Material Unit</th>
+          <th>Material Quantity</th>
+          <th>Cost of a Unit of Material</th>
+          <th>Total Cost of the Material</th>
+        </tr>
+      </thead>
+      <tbody id="materialTableBody">
+      </tbody>
+    `;
+
+    materials.forEach(material => {
+        const materialRow = createMaterialRow(material);
+        const tableBody = table.querySelector('#materialTableBody');
+        tableBody.appendChild(materialRow);
+    });
+
+    materialList.appendChild(table);
+}
+
+function createMaterialRow(material) {
+    const materialRow = document.createElement('tr');
+
+    const materialCell = document.createElement('td');
+    materialCell.textContent = material;
+
+    const unitCell = document.createElement('td');
+    unitCell.textContent = getMaterialUnit(material);
+
+    const quantityCell = document.createElement('td');
+    const quantityInput = document.createElement('input');
+    quantityInput.type = 'number';
+    quantityInput.name = material;
+    quantityInput.placeholder = `Enter quantity of ${material}`;
+    quantityCell.appendChild(quantityInput);
+
+    const costPerUnitCell = document.createElement('td');
+    costPerUnitCell.textContent = `₹${materialPrices[material].toFixed(2)}`;
+
+    const totalCostCell = document.createElement('td');
+    totalCostCell.textContent = '₹0.00';
+
+    const removeMaterialCell = document.createElement('td');
+    const removeMaterialButton = document.createElement('button');
+    removeMaterialButton.textContent = 'Remove';
+    removeMaterialButton.classList.add('remove-material');
+    removeMaterialButton.onclick = function () {
+        materialRow.remove();
+    };
+    removeMaterialCell.appendChild(removeMaterialButton);
+
+    materialRow.appendChild(materialCell);
+    materialRow.appendChild(unitCell);
+    materialRow.appendChild(quantityCell);
+    materialRow.appendChild(costPerUnitCell);
+    materialRow.appendChild(totalCostCell);
+    materialRow.appendChild(removeMaterialCell);
+
+    // Add an event listener to update the total cost when the quantity changes
+    quantityInput.addEventListener('input', function () {
+        const quantity = parseInt(quantityInput.value);
+        const costPerUnit = materialPrices[material];
+        const totalCost = isNaN(quantity) ? 0 : quantity * costPerUnit;
+        totalCostCell.textContent = `₹${totalCost.toFixed(2)}`;
+    });
+
+    return materialRow;
+}
+
+
+function getMaterialUnit(material) {
+    // Define units for each material (customize as needed)
+    const units = {
+        'glue': 'ml',
+        'nails': 'Kg',
+        'cloth': 'm',
+        'plywood': 'm'
+    };
+
+    return units[material] || '';
+}
+
+function addMaterial() {
+    const productType = document.getElementById('productType').value;
+    const materialList = document.getElementById('materialList');
+    const materials = productType === 'sofa' ? ['glue', 'nails', 'cloth'] : ['plywood', 'glue', 'nails'];
+
+    materials.forEach(material => {
+        const existingMaterials = document.querySelectorAll(`input[name="${material}"]`);
+        if (existingMaterials.length === 0) {
+            const materialRow = createMaterialRow(material);
+            const tableBody = document.querySelector('#materialTableBody');
+            tableBody.appendChild(materialRow);
+        }
+    });
+}
+function addMaterialOption() {
+    const materialOptions = document.getElementById('materialOptions');
+    const selectedMaterial = document.getElementById('availableMaterials').value;
+
+    const existingMaterials = document.querySelectorAll(`input[name="${selectedMaterial}"]`);
+    if (existingMaterials.length === 0) {
+        const materialRow = createMaterialRow(selectedMaterial);
+        const tableBody = document.querySelector('#materialTableBody');
+        tableBody.appendChild(materialRow);
+    }
+}
+
+function calculateBOM() {
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const materialInputs = document.querySelectorAll('#materialList input');
+    const labourCharges = parseFloat(document.getElementById('labourCharges').value) || 0; // Default to 0 if no input
+
+    let totalMaterialCost = 0;
+
+    materialInputs.forEach(input => {
+        const materialQuantity = parseInt(input.value);
+        if (!isNaN(materialQuantity)) {
+            const material = input.name;
+            const costPerUnit = materialPrices[material];
+
+            totalMaterialCost += materialQuantity * costPerUnit;
+        }
+    });
+
+    if (!isNaN(quantity)) {
+        totalMaterialCost *= quantity;
+    }
+
+    // Add labor charges to the total cost
+    totalMaterialCost += labourCharges;
+
+    // Calculate additional costs
+    const additionalCostInputs = document.querySelectorAll('.additional-cost');
+    additionalCosts = Array.from(additionalCostInputs).map(input => parseFloat(input.value) || 0);
+
+    const totalAdditionalCost = additionalCosts.reduce((sum, cost) => sum + cost, 0);
+
+    // Calculate tax amount (18% of the total material cost with labour charges and additional costs)
+    const taxRate = 0.18; // 18% tax rate
+    const taxAmount = (totalMaterialCost + totalAdditionalCost) * taxRate;
+
+    // Calculate the final cost (total material cost + tax amount + additional costs)
+    const finalCost = totalMaterialCost + taxAmount + totalAdditionalCost;
+
+    const resultElement = document.getElementById('result');
+    resultElement.innerHTML = `Total Material Cost (including Labour Charges): ₹${totalMaterialCost.toFixed(2)}<br>`;
+    resultElement.innerHTML += `Additional Costs: ₹${totalAdditionalCost.toFixed(2)}<br>`;
+    resultElement.innerHTML += `Tax Amount (18% of Total): ₹${taxAmount.toFixed(2)}<br>`;
+    resultElement.innerHTML += `Final Cost: ₹${finalCost.toFixed(2)}`;
+}
+
+let materialPrices = {
+    'glue': 1.5,
+    'nails': 0.2,
+    'cloth': 2.0,
+    'plywood': 4.0
+};
+
+function openPriceModal() {
+    const priceModal = document.getElementById('priceModal');
+    const priceModalBody = document.getElementById('priceModalBody');
+    const availableMaterialsDropdown = document.getElementById('availableMaterials');
+
+    // Clear existing options in the dropdown
+    availableMaterialsDropdown.innerHTML = '';
+
+    for (const material in materialPrices) {
+        const row = document.createElement('tr');
+
+        const materialCell = document.createElement('td');
+        materialCell.textContent = material;
+
+        const priceCell = document.createElement('td');
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.value = materialPrices[material];
+        priceCell.appendChild(priceInput);
+
+        row.appendChild(materialCell);
+        row.appendChild(priceCell);
+        priceModalBody.appendChild(row);
+
+        // Add the material as an option in the "Available Materials" dropdown
+        const option = document.createElement('option');
+        option.value = material;
+        option.textContent = material;
+        availableMaterialsDropdown.appendChild(option);
+    }
+
+    priceModal.style.display = 'block';
+}
+
+function closePriceModal() {
+    const priceModal = document.getElementById('priceModal');
+    priceModal.style.display = 'none';
+}
+
+function updateMaterialPrices() {
+    const priceModalBody = document.getElementById('priceModalBody');
+    const priceInputs = priceModalBody.getElementsByTagName('input');
+
+    // Clear the existing materialPrices object
+    materialPrices = {};
+
+    for (let i = 0; i < priceInputs.length; i++) {
+        const material = priceInputs[i].parentNode.parentNode.getElementsByTagName('td')[0].textContent;
+        const newPrice = parseFloat(priceInputs[i].value);
+
+        if (!isNaN(newPrice)) {
+            materialPrices[material] = newPrice;
+        }
+    }
+
+    closePriceModal();
+}
+
+    
+    </script>
+</body>
+</html>
